@@ -1,5 +1,8 @@
 import * as jose from 'node-jose'
 import { JWK } from './key';
+import { createDidEthr } from '@kaytrust/did-ethr'
+import { ProofTypeJWT, ResolverOrOptions } from '@kaytrust/prooftypes';
+import { VerifyPresentationOptions } from 'did-jwt-vc';
 
 export type SupportedDid = 'key' | 'ethr' | 'ev'
 
@@ -27,12 +30,34 @@ const createJWTDIDWithJWK = async (jwk: JWK, audience: string, params: any = {},
     return token;
 }
 
-export const createJWT = (didMethod: SupportedDid, jwk: JWK, audience: string, params: any = {}, typ = "JWT") => {
+const createJWTwithProofTypeJwtAndPrivateKey = async (privateKey: string, audience: string, params: any = {}, typ = "JWT") => {
+    const issuer = createDidEthr(params.iss, {privateKey})
+    const payloadObj: any = {
+        'aud': audience,
+        ...params
+    };
+    if (params.nbf) payloadObj.nbf = payloadObj.iat;
+    const vpProofType = new ProofTypeJWT({}, true)
+    return vpProofType.generateProof(payloadObj, issuer)
+}
+
+export type SignOptions = {
+    jwk?: JWK,
+    privateKey?: string,
+}
+
+export const createJWT = (didMethod: SupportedDid, signOptions: SignOptions, audience: string, params: any = {}, typ = "JWT") => {
     let result: any = '';
     switch (didMethod) {
         case 'ethr':
         case 'key':
-            result = createJWTDIDWithJWK(jwk, audience, params, typ);
+            if (signOptions.jwk) {
+                result = createJWTDIDWithJWK(signOptions.jwk, audience, params, typ);
+            } else if (signOptions.privateKey) {
+                result = createJWTwithProofTypeJwtAndPrivateKey(signOptions.privateKey, audience, params, typ)
+            } else {
+                throw new Error('There are no sign options');
+            }
             break;
         case 'ev':
             throw new Error('Not implement function');
@@ -40,4 +65,13 @@ export const createJWT = (didMethod: SupportedDid, jwk: JWK, audience: string, p
             break;
     }
     return result;
+}
+
+
+export const verifyJWTFromVp = async (jwt: string, resolver: ResolverOrOptions, audience: string, options?: VerifyPresentationOptions) => {
+    const proofTypePresentationEmpty = new ProofTypeJWT({resolver, verifyOptions: {
+        ...options,
+        audience: audience,
+    }}, true)
+    return proofTypePresentationEmpty.verifyProof(jwt);
 }
