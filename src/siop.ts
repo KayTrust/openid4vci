@@ -56,7 +56,7 @@ export const getToken = async (
             verifiableCredential: credentials.map((credential) => credential),
         }
     }
-    jwt = createJWT(extractDidMethod(did) as SupportedDid, signOptions, urlParams.client_id, jwtParams);
+    jwt = createJWT(extractDidMethod(did) as SupportedDid, signOptions, jwtParams, {audience: urlParams.client_id as string, is_presentation: true});
     return jwt;
 }
 
