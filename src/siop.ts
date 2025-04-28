@@ -1,7 +1,6 @@
 // import { JWK } from "jose"
 import { extractDidMethod } from "./issuer"
-import { createJWT, SupportedDid } from "./jwt"
-import { JWK } from "./key";
+import { createJWT, SignOptions, SupportedDid } from "./jwt"
 import { getJwtTime, readUrlParams } from "./utils"
 import axios from 'axios'
 import qs from 'qs';
@@ -39,7 +38,7 @@ export interface SIOPVPUrlParams {
 export const getToken = async (
     responseType: ResponseType,
     urlParams: Record<string, any>,
-    jwk: JWK,
+    signOptions: SignOptions,
     did: string,
     credentials: string[] = [],
     validDays: number | undefined = undefined,
@@ -57,7 +56,7 @@ export const getToken = async (
             verifiableCredential: credentials.map((credential) => credential),
         }
     }
-    jwt = createJWT(extractDidMethod(did) as SupportedDid, jwk, urlParams.client_id, jwtParams);
+    jwt = createJWT(extractDidMethod(did) as SupportedDid, signOptions, urlParams.client_id, jwtParams);
     return jwt;
 }
 
@@ -66,7 +65,7 @@ export type SiopResponse = {url?: string, modeAs: UrlModeAs, response_mode: Resp
 export const siopFlow = (
     deepLinkContent: string,
     did: string,
-    jwk: JWK,
+    signOptions: SignOptions,
     credentials: string[] = [],
     presentationSubmission: Record<string, any> = {},
     validDays: number | undefined = undefined,
@@ -75,7 +74,7 @@ export const siopFlow = (
     const urlParams = readUrlParams<SIOPVPUrlParams>(deepLinkContent);
 
     const responseType = urlParams.response_type;
-    const jwt = await getToken(responseType, urlParams, jwk, did, credentials, validDays);
+    const jwt = await getToken(responseType, urlParams, signOptions, did, credentials, validDays);
 
     const response_mode = urlParams.response_mode.toLowerCase() as ResponseMode
 

@@ -1,8 +1,11 @@
 import { ResultUrlModeAsEnum, siopFlow } from '#src/siop'
-import {describe, test, beforeAll, expect} from 'vitest'
-import {createDidEthrFromPrivateKey, EthrDID} from '@kaytrust/did-ethr'
+import { describe, test, beforeAll, expect } from 'vitest'
+import { createDidEthrFromPrivateKey, EthrDID } from '@kaytrust/did-ethr'
+import { Wallet } from 'ethers'
 
 import { createJWK, getPrivateKeyFromJWK, JWK } from '#src/key'
+import { readUrlParams } from '#src/utils'
+import { ProofTypeJWT, ResolverOrOptions } from '@kaytrust/prooftypes'
 
 const credential_offering = "openid://?state=e0520dc4-b57a-47c5-8ebf-ed95175561c8&redirect_uri=https%3A%2F%2Ffrutas-back.demo.kaytrust.id%2Foauth2%2Fcb%2FvpToken&response_mode=query&response_type=vp_token&client_id=https%3A%2F%2Ffrutas-back.demo.kaytrust.id%2Foauth&scope=openid"
 
@@ -13,18 +16,68 @@ let privateKey: string;
 
 let issuerDidEthr: EthrDID;
 
-describe("Probar las solicitudes", () => {
+
+const RPC_AMOY = process.env.RPC_AMOY!;
+const AMOY_CHAIN_ID = 80002;
+
+describe("Probar siop con jwk", () => {
 
     beforeAll(async () => {
         jwk = await createJWK(Date.now()+"")
         console.log(jwk)
         privateKey = await getPrivateKeyFromJWK(jwk);
-        issuerDidEthr = createDidEthrFromPrivateKey(privateKey, {rpcUrl: "https://eth.merkle.io"})
+        issuerDidEthr = createDidEthrFromPrivateKey(privateKey, {rpcUrl: "https://eth.merkle.io", chainNameOrId: AMOY_CHAIN_ID})
     })
 
     test("test mango corp response_mode=query&response_type=vp_token", {timeout: 30000}, async () => {
-        const result = await siopFlow(credential_offering, issuerDidEthr.did, jwk, [credential], {})
-        console.log("url", result.url)
+        const result = await siopFlow(credential_offering, issuerDidEthr.did, {jwk}, [credential], {})
+        console.log("url (jwt with jwk)", result.url)
         expect(result.modeAs).toBe(ResultUrlModeAsEnum.REQUEST)
     })
+
+    // if (RPC_AMOY) {
+    //     test("verified jwt vp", {timeout: 30000}, async () => {
+    //         const result = await siopFlow(credential_offering, issuerDidEthr.did, {jwk}, [credential], {})
+    //         // console.log("url (jwt with prooftype)", result.url)
+    //         const params = readUrlParams(result.url!);
+    //         const jwt = params.vp_token
+    //         console.log("jwt with jwk - verify", jwt)
+    //         const resolver:ResolverOrOptions = {registry: '0xBC56d0883ef228b2B16420E9002Ece0A46c893F8', rpcUrl: RPC_AMOY, chainId: AMOY_CHAIN_ID}
+    //         const proofTypePresentationEmpty = new ProofTypeJWT({resolver, verifyOptions: {
+    //             audience: "https://frutas-back.demo.kaytrust.id/oauth",
+    //         }}, true)
+    //         const verified = await proofTypePresentationEmpty.verifyProof(jwt)
+    //         expect(verified.verified).toBeTruthy();
+    //     })
+    // }
+})
+
+describe("Probar siop con privateKey + proofType", () => {
+
+    beforeAll(async () => {
+        privateKey = process.env.TEST_KEY || Wallet.createRandom().privateKey;
+        issuerDidEthr = createDidEthrFromPrivateKey(privateKey, {chainNameOrId: AMOY_CHAIN_ID, rpcUrl: "https://eth.merkle.io"})
+    })
+
+    test("test mango corp response_mode=query&response_type=vp_token", {timeout: 30000}, async () => {
+        const result = await siopFlow(credential_offering, issuerDidEthr.did, {privateKey}, [credential], {})
+        console.log("url (jwt with prooftype)", result.url)
+        expect(result.modeAs).toBe(ResultUrlModeAsEnum.REQUEST)
+    })
+
+    if (RPC_AMOY) {
+        test("verified jwt vp", {timeout: 30000}, async () => {
+            const result = await siopFlow(credential_offering, issuerDidEthr.did, {privateKey}, [credential], {})
+            // console.log("url (jwt with prooftype)", result.url)
+            const params = readUrlParams(result.url!);
+            // console.log(params.vp_token)
+            const jwt = params.vp_token
+            const resolver:ResolverOrOptions = {registry: '0xBC56d0883ef228b2B16420E9002Ece0A46c893F8', rpcUrl: RPC_AMOY, chainId: AMOY_CHAIN_ID}
+            const proofTypePresentationEmpty = new ProofTypeJWT({resolver, verifyOptions: {
+                audience: "https://frutas-back.demo.kaytrust.id/oauth",
+            }}, true)
+            const verified = await proofTypePresentationEmpty.verifyProof(jwt)
+            expect(verified.verified).toBeTruthy();
+        })
+    }
 })

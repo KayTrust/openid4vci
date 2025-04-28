@@ -1,6 +1,6 @@
 {
   "name": "@kaytrust/openid4vci",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "source": "src/index.ts",
   "main": "lib/index.js",
   "repository": "git@github.com:KayTrust/openid4vci.git",
@@ -45,6 +45,7 @@
     "vitest": "^2.1.2"
   },
   "dependencies": {
+    "@kaytrust/prooftypes": "^0.1.0",
     "axios": "^1.7.7",
     "node-jose": "^2.2.0",
     "qs": "^6.13.0"

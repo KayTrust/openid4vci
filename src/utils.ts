@@ -1,4 +1,4 @@
-export const readUrlParams = <T extends {}>(data: string): T => {
+export const readUrlParams = <T extends {} = Record<string, any>>(data: string): T => {
 
     let params: Record<string, string|number> = {};
     if (data.includes('?')) {
