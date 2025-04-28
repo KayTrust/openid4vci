@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 export const readUrlParams = <T extends {} = Record<string, any>>(data: string): T => {
 
     let params: Record<string, string|number> = {};
@@ -37,3 +39,27 @@ export const readUrlParams = <T extends {} = Record<string, any>>(data: string):
 
     return { iat, exp, nbf };
 };
+
+export function generarHash(texto: string, algoritmo = 'sha256') {
+  const hash = createHash(algoritmo);
+  hash.update(texto);
+  return hash.digest('hex');
+}
+
+export function getFormatterFromMessages<T>(errors: T) {
+  return (errorCode: keyof T, ...args: string[]) => {
+    const messageTemplate = errors[errorCode];
+    return format(messageTemplate as string, ...args);
+  }
+}
+
+export function getFormatterErrorMessages<T>(errors: T) {
+  const cb = getFormatterFromMessages(errors);
+  return (...args: Parameters<typeof cb>) => {
+    return  cb(...args) + " " + format("(%s)", args[0] as string);
+  }
+}
+
+export function format(template: string, ...args: string[]): string {
+  return template.replace(/%s/g, () => args.shift() || '');
+}

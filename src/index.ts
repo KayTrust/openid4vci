@@ -1,3 +1,7 @@
 export * from './siop'
 export * from './key'
-export { verifyJWTFromVp, createJWT } from './jwt'
+export * from './jwt'
+export * from './enums/index.enum'
+export * from './interfaces/openid-credential-issuer-metadata.interface'
+export * from './interfaces/openid-credential-metadata.interface'
+export * from './credential'
