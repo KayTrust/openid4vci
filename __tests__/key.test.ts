@@ -12,6 +12,7 @@ describe("Testing keys", () => {
     beforeAll(async () => {
         basePrivateKey = Wallet.createRandom().privateKey;
         jwk = await createJWKFromPrivateKey(basePrivateKey);
+        console.log("jwk", jwk)
         resultPrivateKey = getPrivateKeyFromJWK(jwk);
     })
 

@@ -3,6 +3,7 @@ import * as jose from 'node-jose';
 import {Wallet} from 'ethers'
 import { generarHash } from './utils';
 import {createECDH, createPrivateKey, createPublicKey} from 'crypto'
+import base64url from 'base64url'
 
 export type JWK = BaseJWK & {
     kty: "EC"
@@ -23,11 +24,7 @@ export type CreateJwkFromWalletOptions = {
 }
 
 function hexToBase64Url(hexStr: string) {
-    return Buffer.from(hexStr, 'hex')
-        .toString('base64url')
-        // .replace(/\+/g, '-')
-        // .replace(/\//g, '_')
-        // .replace(/=/g, '');
+    return base64url.encode(Buffer.from(hexStr, 'hex'));
 }
 
 export function getPublicKeyFromPrivateKeyCurveP256(privateKeyHex: string) {
@@ -60,7 +57,7 @@ export const createJWKFromWallet = async (wallet: Wallet, {kid: _kid, curve = "s
         kid: _kid,
         kty: keyType,
         crv: curve,
-        d: privateKeyBuffer.toString("base64url"),
+        d: base64url.encode(privateKeyBuffer),
         x: hexToBase64Url(publicKeyUncompressed.substring(2, 66)),
         y: hexToBase64Url(publicKeyUncompressed.substring(66, 130)),
     });
@@ -83,7 +80,6 @@ export const createJWK = async (_kid?: string): Promise<JWK> => {
 }
 
 export const getPrivateKeyFromJWK = (jwk: JWK): string => {
-    const privateKeyBuffer = Buffer.from(jwk.d, 'base64url');
-    const privateKey = '0x' + privateKeyBuffer.toString('hex');
+    const privateKey = '0x' + base64url.decode(jwk.d, 'hex');
     return privateKey;
 }
