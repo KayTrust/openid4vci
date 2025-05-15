@@ -56,8 +56,7 @@ export const getToken = async (
             verifiableCredential: credentials.map((credential) => credential),
         }
     }
-    jwt = createJWT(extractDidMethod(did) as SupportedDid, signOptions, jwtParams, {audience: urlParams.client_id as string, is_presentation: true});
-    return jwt;
+    return createJWT(extractDidMethod(did) as SupportedDid, signOptions, jwtParams, {audience: urlParams.client_id as string, is_presentation: true});
 }
 
 export type SiopResponse = {url?: string, modeAs: UrlModeAs, response_mode: ResponseMode}

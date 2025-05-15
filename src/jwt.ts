@@ -1,27 +1,23 @@
 import * as jose from 'node-jose'
-import { getPrivateKeyFromJWK, JWK } from './key';
+import { createJWKFromPrivateKey, getPrivateKeyFromJWK, JWK } from './key';
 import { createDidEthr } from '@kaytrust/did-ethr'
 import { ProofTypeJWT, ResolverOrOptions } from '@kaytrust/prooftypes';
 import { VerifyPresentationOptions, VerifyCredentialOptions } from 'did-jwt-vc';
 import { decodeProtectedHeader } from 'jose';
 import { getFormatterErrorMessages } from './utils';
 import { VerifierErrorCode, VerifierErrors } from './enums/verifier-errors.enum';
-import { JWTVerifyOptions, verifyJWT } from 'did-jwt';
+import { JWTPayload, JWTVerifyOptions, verifyJWT } from 'did-jwt';
+import {getIssuerWithPrivateKey, SupportedDid} from './issuer'
 
-export type SupportedDid = 'key' | 'ethr' | 'ev'
+export {type SupportedDid} from './issuer'
 
 const createJWTDIDWithJWK = async (jwk: JWK, audience: string, payloadData: any = {}, typ = "JWT", headers = {}) => {
     if (!jwk) {
         throw 'a jwk is required';
     }
 
-    // const privateKey = await jose.importJWK(jwk)
-
-    // const jwt = await new jose.SignJWT()
-
     const opt = { compact: true, fields: { typ: typ, kid: `${payloadData.iss}#${payloadData.iss.split(":")[2]}` } };
     const payloadObj: any = {
-        // 'aud': audience,
         ...payloadData
     };
     if (audience) payloadObj.aud = audience;
@@ -39,15 +35,15 @@ type CreateJWTwithProofTypeJwtAndPrivateKeyOptions = {
     header?: Record<string, any>
 }
 
-const createJWTwithProofTypeJwtAndPrivateKey = async (privateKey: string, audience: string, payload: any = {}, {is_presentation = false, ...options}: CreateJWTwithProofTypeJwtAndPrivateKeyOptions = {}) => {
-    const issuer = createDidEthr(payload.iss, {privateKey})
+const createJWTwithProofTypeJwtAndPrivateKey = async (privateKey: string, audience: string, payload: JWTPayload = {}, {is_presentation = false, ...options}: CreateJWTwithProofTypeJwtAndPrivateKeyOptions = {}) => {
+    const issuer = getIssuerWithPrivateKey(payload.iss!, privateKey);
     const payloadObj: any = {
         ...payload
     };
     if (audience) payloadObj.aud = audience;
     if (payload.nbf) payloadObj.nbf = payloadObj.iat;
-    const vpProofType = new ProofTypeJWT({}, is_presentation)
-    return vpProofType.generateProof(payloadObj, issuer, {header: options.header})
+    const proofType = new ProofTypeJWT({}, is_presentation)
+    return proofType.generateProof(payloadObj, issuer, {header: options.header})
 }
 
 export type SignOptions = {
@@ -60,31 +56,31 @@ type CreateJwtOptions = {
     audience?: string,
     headers?: Record<string, any>
     is_presentation?: boolean,
+    no_vc_vp?: boolean,
 }
 
-type CreateJwtVcOptions = Omit<CreateJwtOptions, 'is_presentation'>
+type CreateJwtVcOptions = Omit<CreateJwtOptions, 'is_presentation' | 'no_vc_vp'>
 
 export const createJWTVc = (didMethod: SupportedDid, signOptions: SignOptions, payload: Record<string, any> = {}, options: CreateJwtVcOptions = {}) => {
     return createJWT(didMethod, signOptions, payload, {...options, is_presentation: false})
 }
 
-export const createJWT = (didMethod: SupportedDid, signOptions: SignOptions, payload: Record<string, any> = {}, {audience, typ = "JWT", is_presentation=false}: Partial<CreateJwtOptions> = {}) => {
+export const createJWT = async (didMethod: SupportedDid, signOptions: SignOptions, payload: Record<string, any> = {}, {audience, typ = "JWT", is_presentation=false, no_vc_vp = false}: Partial<CreateJwtOptions> = {}): Promise<string> => {
     let result: any = '';
     switch (didMethod) {
         case 'ethr':
         case 'key':
-            if (signOptions.privateKey || signOptions.jwk) {
+            if ((signOptions.privateKey || signOptions.jwk) && !no_vc_vp) {
                 result = createJWTwithProofTypeJwtAndPrivateKey(signOptions.privateKey || getPrivateKeyFromJWK(signOptions.jwk!), audience!, payload, {is_presentation})
-            } else if (signOptions.jwk) {
+            } else if (signOptions.jwk || signOptions.privateKey) {
+                if (!signOptions.jwk) signOptions.jwk = await createJWKFromPrivateKey(signOptions.privateKey);
                 result = createJWTDIDWithJWK(signOptions.jwk, audience!, payload, typ);
             } else {
                 throw new Error('There are no sign options');
             }
             break;
-        case 'ev':
-            throw new Error('Not implement function');
         default:
-            break;
+            throw new Error('Not implement function');
     }
     return result;
 }
