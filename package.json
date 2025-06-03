@@ -53,7 +53,7 @@
     "@kaytrust/did-near": "^0.1.0",
     "@kaytrust/prooftypes": "^0.1.5",
     "@noble/hashes": "^1.8.0",
-    "axios": "^1.7.7",
+    "axios": "^1.8.2",
     "base64url": "^3.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
