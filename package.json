@@ -1,6 +1,6 @@
 {
   "name": "@kaytrust/openid4vci",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "source": "src/index.ts",
   "main": "lib/index.js",
   "types": "src/index.ts",
