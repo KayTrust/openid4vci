@@ -68,6 +68,7 @@ export const createJWTVc = (didMethod: SupportedDid, signOptions: SignOptions, p
 export const createJWT = async (didMethod: SupportedDid, signOptions: SignOptions, payload: Record<string, any> = {}, {audience, typ = "JWT", is_presentation=false, no_vc_vp = false}: Partial<CreateJwtOptions> = {}): Promise<string> => {
     let result: any = '';
     switch (didMethod) {
+        case 'near':
         case 'ethr':
         case 'key':
             if ((signOptions.privateKey || signOptions.jwk) && !no_vc_vp) {
